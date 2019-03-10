@@ -1,0 +1,150 @@
+---
+title: "CKME136 - Bus Data 2017"
+author: "Mary-Kate Fraser"
+date: '2019-02-23'
+output: word_document
+---
+L
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+Bus_2017 <- read_excel("~/Desktop/Big Data/CKME 136/Bus_2017.xlsx")
+Bus <- data.frame(Bus_2017)
+nrow(Bus)
+```
+
+## Determinig the attributes with missing values 
+
+```{r}
+sum(is.na(Bus))
+sum(is.na(Bus$Report.Date))
+sum(is.na(Bus$Route))
+sum(is.na(Bus$Time))
+sum(is.na(Bus$Day))
+sum(is.na(Bus$Location))
+sum(is.na(Bus$Incident))
+sum(is.na(Bus$Min.Delay))
+sum(is.na(Bus$Min.Gap))
+sum(is.na(Bus$Direction))
+sum(is.na(Bus$Vehicle))
+```
+
+## Remove NA values from min.delay and min.gap (our dependant variables) Remove rows missing Locationa variable as 119 is insignificant in our dataset of 70,000 rows. Remove the vehicle variable as there are 10,000 rows missing and this will not help us with our predictions. 
+```{r}
+
+BusClean1 <- subset(Bus, !is.na(Bus$Min.Delay))
+BusClean2 <- subset(BusClean1, !is.na(Bus$Min.Gap))
+BusClean3 <- subset(BusClean2, !is.na(Bus$Location))
+BusClean4 <- subset(BusClean3, !is.na(Bus$Direction))
+BusClean <- BusClean4[-10]
+
+nrow(BusClean)
+ncol(BusClean)
+sum(is.na(BusClean))
+
+```
+## Change the factors for for Route and Vehicle to charactrs. 
+
+```{r}
+
+BusClean$Route <- as.character(BusClean$Route)
+names(BusClean)[7] <- "Delay"
+names(BusClean)[8] <- "Gap"
+names(BusClean)[1] <- "Date"
+
+```
+## 
+Import clean dataset 
+
+```{r}
+ Bus_Clean_edited <- read.csv("~/Desktop/Big Data/CKME 136/Bus_Clean_edited.csv")
+Bus2 <- Bus_Clean_edited
+Bus2$Route <- as.character(Bus2$Route)
+str(Bus2)
+summary(Bus2$Delay)
+```
+
+# Add mesaure column for Low and High 
+```{r} 
+Bus2$Measure[Bus2$Delay <= 15] <- "Low"
+Bus2$Measure[Bus2$Delay > 15] <- "High"
+
+```
+
+#Import final data set
+
+```{r} 
+Bus_Measure <- read_csv("~/Desktop/Big Data/CKME 136/Bus_Measure.csv")
+Bus3 <- Bus_Measure
+```
+#Clean final data set 
+
+```{r} 
+Bus3$Date <- paste('20',Bus3$Date,sep = '')
+Bus3$Date_Time <-   paste(Bus3$Date,Bus3$Time,sep = ' ')
+Bus3$Date_Time <- strptime(Bus3$Date_Time,"%Y-%m-%d %H:%M:%S", tz = "America/New_York")
+Bus3$Date <- as.Date(Bus3$Date)
+Bus3$mday <- as.factor(format(Bus3$Date,'%d'))
+table(Bus3$mday, useNA = 'ifany')
+Bus3$Month <- as.factor(format(Bus3$Date,'%m'))
+table(Bus3$Month, useNA = 'ifany')
+Bus3$Year <- as.factor(format(Bus3$Date,'%Y'))
+table(Bus3$Year, useNA = 'ifany')
+Bus3$Hour <- as.factor(format(Bus3$Date_Time,'%H'))
+table(Bus3$Hour,useNA = 'ifany')
+Bus3$Minute <- as.factor(format(Bus3$Date_Time,'%M'))
+table(Bus3$Minute,useNA = 'ifany')
+Bus3$Seconds <- as.factor(format(Bus3$Date_Time,'%S'))
+table(Bus3$Seconds,useNA = 'ifany')
+Bus3$Route <- as.factor(toupper(Bus3$Route))
+table(Bus3$Route,useNA = 'ifany')
+Bus3$Location <- as.factor(toupper(Bus3$Location))
+Bus3$Measure <- as.factor(Bus2$Measure=='High')
+table(Bus3$Measure, useNA = 'ifany')
+str(Bus3)
+
+```
+
+## Logistic Regression Model 
+```{r} 
+model.Bus3<- glm(Measure ~ mday+Month+Hour+Minute+Route, data = Bus3, family=binomial)
+summary(model.Bus3)
+```
+
+
+## Set up the test set for the classification tree. 
+```{r} 
+set.seed(101)
+alpha <- 0.7
+inTrain <- sample(1:nrow(Bus3), alpha*nrow(Bus3))
+train.set <- Bus3[inTrain,]
+test.set <- Bus3[-inTrain,]
+```
+
+
+## Classifiscation Tree 
+```{r}
+
+class.tree <- rpart(Measure ~ Route+Incident+Location+mday+Month+Hour, data = train.set) 
+printcp(class.tree)
+
+
+```
+
+
+##Visuzlize the decision tree 
+```{r}
+
+plot(class.tree, uniform = TRUE, main = "Classification for Bus Delays")
+text(class.tree, use.n=TRUE, all=TRUE, cex=.8)
+
+
+```
