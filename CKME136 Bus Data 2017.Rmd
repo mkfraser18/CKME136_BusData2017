@@ -107,7 +107,7 @@ table(Bus3$Seconds,useNA = 'ifany')
 Bus3$Route <- as.factor(toupper(Bus3$Route))
 table(Bus3$Route,useNA = 'ifany')
 Bus3$Location <- as.factor(toupper(Bus3$Location))
-Bus3$Measure <- as.factor(Bus2$Measure=='High')
+Bus3$Measure <- as.factor(Bus2$Measure =='High')
 table(Bus3$Measure, useNA = 'ifany')
 str(Bus3)
 
@@ -115,14 +115,36 @@ str(Bus3)
 
 ## Logistic Regression Model 
 ```{r} 
-model.Bus3<- glm(Measure ~ mday+Month+Hour+Minute+Route, data = Bus3, family=binomial)
+model.Bus3<- 
 summary(model.Bus3)
+anova(model.Bus3)
 ```
+##Run training set 
+```{r} 
+logtrain <- glm(Measure ~ Route+Day, data = train.set, family=binomial)
+summary(logtrain)
+```
+
+Run test set 
+```{r} 
+logpred <- predict(logtrain, newdata = test.set, type = "response")
+prednum <- ifelse(logpred > 0.5, 1, 0)
+y_pred <- factor(prednum, levels=c(0, 1))
+y_act <- test.set$Measure
+```
+
+
+## Anova of Model 
+```{r} 
+
+confint(model.Bus3)
+```
+
 
 
 ## Set up the test set for the classification tree. 
 ```{r} 
-set.seed(101)
+set.seed(1)
 alpha <- 0.7
 inTrain <- sample(1:nrow(Bus3), alpha*nrow(Bus3))
 train.set <- Bus3[inTrain,]
@@ -133,7 +155,7 @@ test.set <- Bus3[-inTrain,]
 ## Classifiscation Tree 
 ```{r}
 
-class.tree <- rpart(Measure ~ Route+Incident+Location+mday+Month+Hour, data = train.set) 
+class.tree <- rpart(Measure ~ Hour, data = train.set) 
 printcp(class.tree)
 
 
@@ -147,4 +169,43 @@ plot(class.tree, uniform = TRUE, main = "Classification for Bus Delays")
 text(class.tree, use.n=TRUE, all=TRUE, cex=.8)
 
 
+```
+
+## Run training set 
+
+```{r}
+set.seed(1)
+tree1 <- rpart(Measure ~ Incident+Route, data= train.set, method = "class")
+rpart.plot(tree1, box.palette="RdBu", shadow.col="grey", nn = TRUE)
+summary(tree1)
+```
+#Run the prediction 
+
+```{r}
+treepred <- predict(tree1, train.set, type = "class")
+X <- table(treepred, train.set$Measure)
+accuracy <- sum(diag(X))/sum(X)
+print(X)
+print(accuracy)
+```
+
+
+## Precision, Recalla and Confusion Matrix 
+```{r}
+n = sum(X)
+nc = nrow(X)
+diag = diag(X)
+rowsums = apply(X, 1, sum)
+colsums = apply(X, 2, sum)
+p = rowsums/n
+q = colsums/n
+accuracy = sum(diag)/n
+accuracy
+precision = diag/colsums
+recall = diag/rowsums
+f1 = 2*precision*recall/ (precision+recall)
+precision
+recall
+f1
+data.frame(precision, recall, f1)
 ```
