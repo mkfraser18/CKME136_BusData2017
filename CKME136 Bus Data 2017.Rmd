@@ -113,36 +113,8 @@ str(Bus3)
 
 ```
 
-## Logistic Regression Model 
-```{r} 
-model.Bus3<- 
-summary(model.Bus3)
-anova(model.Bus3)
-```
-##Run training set 
-```{r} 
-logtrain <- glm(Measure ~ Route+Day, data = train.set, family=binomial)
-summary(logtrain)
-```
 
-Run test set 
-```{r} 
-logpred <- predict(logtrain, newdata = test.set, type = "response")
-prednum <- ifelse(logpred > 0.5, 1, 0)
-y_pred <- factor(prednum, levels=c(0, 1))
-y_act <- test.set$Measure
-```
-
-
-## Anova of Model 
-```{r} 
-
-confint(model.Bus3)
-```
-
-
-
-## Set up the test set for the classification tree. 
+## Set up the test the test set and train set 
 ```{r} 
 set.seed(1)
 alpha <- 0.7
@@ -150,6 +122,89 @@ inTrain <- sample(1:nrow(Bus3), alpha*nrow(Bus3))
 train.set <- Bus3[inTrain,]
 test.set <- Bus3[-inTrain,]
 ```
+
+##Run training set 
+```{r} 
+logtrain <- glm(Measure ~ Route+Day, data = train.set, family=binomial)
+summary(logtrain)
+```
+
+
+##Remove new levels from test set 
+```{r} 
+
+
+```  
+   
+```{r}                                            
+test.set
+logpred <- predict(logtrain, test.set,, type = "response")
+prednum <- ifelse(logpred > 0.5, 1, 0
+
+```  
+
+## Remove problem levles 
+```{r}    
+test.set <- test.set[!(test.set$Route == "147"),]
+test.set <- test.set[!(test.set$Route == "241"),]
+test.set <- test.set[!(test.set$Route == "247"),]
+test.set <- test.set[!(test.set$Route == "369"),]
+test.set <- test.set[!(test.set$Route == "393"),]
+test.set <- test.set[!(test.set$Route == "514"),]
+test.set <- test.set[!(test.set$Route == "725"),]
+test.set <- test.set[!(test.set$Route == "737"),]
+test.set <- test.set[!(test.set$Route == "853"),]
+
+train.set <- train.set[!(train.set$Route == "147"),]
+train.set <- train.set[!(train.set$Route == "241"),]
+train.set <- train.set[!(train.set$Route == "247"),]
+train.set <- train.set[!(train.set$Route == "369"),]
+train.set <- train.set[!(train.set$Route == "393"),]
+train.set <- train.set[!(train.set$Route == "514"),]
+train.set <- train.set[!(train.set$Route == "725"),]
+train.set <- train.set[!(train.set$Route == "737"),]
+train.set <- train.set[!(train.set$Route == "853"),]
+```
+
+#Predict 
+```{r}    
+
+logpred <- predict(logtrain, test.set,, type = "response")
+prednum <- ifelse(logpred > 0.5, 1, 0)
+y_pred <- factor(prednum, levels=c(0, 1))
+y_act <- test.set$Measure
+```
+
+
+
+## Accuracy of logistic regression  
+```{r} 
+logtable <- table(logpred, train.set$Measure)
+accuracylog <- sum(diag(logtable))/sum(logtable)
+print(logtable)
+print(accuracylog)
+```
+
+```{r} 
+a = sum(logtable)
+ac = nrow(logtable)
+diaglog = diag(logtable)
+rowsums = apply(logtable, 1, sum)
+colsums = apply(logtable, 2, sum)
+p = rowsums/a
+q = colsums/a
+accuracylog = sum(diaglog)/a
+accuracylog
+precision = diaglog/colsums
+recall = diaglog/rowsums
+f1 = 2*precision*recall/ (precision+recall)
+precision
+recall
+f1
+data.frame(precision, recall, f1)
+```
+
+
 
 
 ## Classifiscation Tree 
@@ -209,3 +264,4 @@ recall
 f1
 data.frame(precision, recall, f1)
 ```
+
